@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { query } from '../config/db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/http.js';
+import { audit } from '../utils/audit.js';
+const router=Router();router.use(requireAuth);
+router.get('/',asyncHandler(async(_req,res)=>{const result=await query('SELECT key,value FROM library_settings ORDER BY key');res.json({data:Object.fromEntries(result.rows.map((r:any)=>[r.key,Number(r.value)]))});}));
+router.put('/',requireRole('admin'),asyncHandler(async(req,res)=>{const values=z.object({borrowing_period_days:z.coerce.number().int().min(1).max(365),max_books_per_member:z.coerce.number().int().min(1).max(100),max_renewals:z.coerce.number().int().min(0).max(20),fine_per_day:z.coerce.number().min(0).max(100),max_fine:z.coerce.number().min(0).max(10000),grace_period_days:z.coerce.number().int().min(0).max(30)}).parse(req.body);for(const [key,value] of Object.entries(values))await query(`INSERT INTO library_settings(key,value,updated_by) VALUES($1,to_jsonb($2::numeric),$3) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=now(),updated_by=EXCLUDED.updated_by`,[key,value,req.user!.id]);await audit({userId:req.user!.id,action:'updated',entity:'library_settings',details:values,ip:req.ip});res.json({data:values});}));
+export default router;

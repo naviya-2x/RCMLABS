@@ -1,0 +1,13 @@
+{
+  "name": "library-management-system",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "test": "npm run test -w backend",
+    "db:migrate": "npm run build -w backend && npm run db:migrate -w backend",
+    "db:seed": "npm run build -w backend && npm run db:seed -w backend"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}

@@ -1,0 +1,13 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { query } from '../config/db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { AppError, asyncHandler } from '../utils/http.js';
+import { audit } from '../utils/audit.js';
+const router=Router();router.use(requireAuth,requireRole('admin'));
+router.get('/',asyncHandler(async(_req,res)=>{const result=await query(`SELECT u.id,u.name,u.email,u.is_active,u.last_login_at,u.created_at,r.name role FROM users u JOIN roles r ON r.id=u.role_id ORDER BY u.created_at DESC`);res.json({data:result.rows});}));
+const input=z.object({name:z.string().trim().min(2).max(120),email:z.string().email(),password:z.string().min(8).optional(),role:z.enum(['admin','librarian']),is_active:z.boolean().default(true)});
+router.post('/',asyncHandler(async(req,res)=>{const data=input.required({password:true}).parse(req.body);const role=await query<{id:number}>('SELECT id FROM roles WHERE name=$1',[data.role]);const user=await query(`INSERT INTO users(name,email,password_hash,role_id,is_active) VALUES($1,$2,$3,$4,$5) RETURNING id,name,email,is_active,created_at`,[data.name,data.email,await bcrypt.hash(data.password,12),role.rows[0].id,data.is_active]);await audit({userId:req.user!.id,action:'created',entity:'user',entityId:user.rows[0].id,details:{role:data.role},ip:req.ip});res.status(201).json({data:user.rows[0]});}));
+router.put('/:id',asyncHandler(async(req,res)=>{const data=input.partial().parse(req.body);const keys=Object.entries(data) as Array<[string,unknown]>;const mapped=keys.filter(([key])=>key!=='password');if(data.password)mapped.push(['password_hash',await bcrypt.hash(data.password,12)]);if(!mapped.length)throw new AppError(400,'No changes submitted.','VALIDATION_ERROR');if(mapped.some(([key])=>key==='role')){const role=mapped.find(([key])=>key==='role')![1];mapped.splice(mapped.findIndex(([key])=>key==='role'),1,['role_id',(await query<{id:number}>('SELECT id FROM roles WHERE name=$1',[role])).rows[0].id]);}const result=await query(`UPDATE users SET ${mapped.map(([key],i)=>`${key}=$${i+1}`).join(',')},updated_at=now() WHERE id=$${mapped.length+1} RETURNING id,name,email,is_active,updated_at`,[...mapped.map(([,v])=>v),String(req.params.id)]);if(!result.rowCount)throw new AppError(404,'User not found.','NOT_FOUND');await audit({userId:req.user!.id,action:'updated',entity:'user',entityId:String(req.params.id),details:{fields:keys.map(([k])=>k)},ip:req.ip});res.json({data:result.rows[0]});}));
+export default router;
