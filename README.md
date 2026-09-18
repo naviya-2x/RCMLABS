@@ -2,6 +2,18 @@
 
 Shelfwise is a production-oriented library management system with a React/TypeScript frontend, Express REST API, PostgreSQL, secure cookie authentication, role-based access control, transactional circulation, fines, reservations, reports, audit logging, and Docker deployment support.
 
+## One-command Linux install
+
+On a fresh Linux server with Docker Engine and Docker Compose installed, download and run the installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/naviya-2x/RCMLABS/arena/01a0b311-rcmlabs/install.sh -o install.sh
+chmod +x install.sh
+SHELFWISE_ORIGIN=http://localhost:8080 ./install.sh
+```
+
+For a public HTTPS domain, use `SHELFWISE_ORIGIN=https://library.example.com`. The script downloads the repository, generates secrets, creates `.env`, builds the containers, waits for the database/API, and seeds development data. Use `SHELFWISE_SEED=false` to skip sample data. The app is installed at `$HOME/shelfwise` by default; override it with `SHELFWISE_DIR=/srv/shelfwise`.
+
 ## Quick start with Docker
 
 ```bash
