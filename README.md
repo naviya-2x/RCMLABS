@@ -52,6 +52,12 @@ The API is at `http://localhost:4000` and the Vite frontend at `http://localhost
 | `COOKIE_SECURE` | Set `true` when served over HTTPS |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Optional email integration settings |
 
+## Vercel deployment
+
+Vercel deployment is supported for the React frontend and Express API through `api/index.ts` and `vercel.json`. Vercel does not provide the PostgreSQL database, so connect a managed PostgreSQL provider such as Neon or Supabase. Follow [`docs/VERCEL.md`](docs/VERCEL.md) for environment variables, migrations, and deployment steps.
+
+The current sandbox login error means the API cannot reach PostgreSQL; it is not caused by the seeded credentials.
+
 ## Linux VPS deployment
 
 1. On Ubuntu/Debian install Docker Engine and the Compose plugin, then clone this repository.
